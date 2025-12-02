@@ -1,0 +1,18 @@
+{
+    "categories": {
+        "completed": true,
+        "last_id": 0
+    },
+    "books": {
+        "completed": true,
+        "last_id": 0
+    },
+    "contents": {
+        "completed": false,
+        "last_id": 0
+    },
+    "user_books": {
+        "completed": false,
+        "last_id": 0
+    }
+}

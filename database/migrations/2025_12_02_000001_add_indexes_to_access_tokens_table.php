@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,33 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('access_tokens', function (Blueprint $table) {
-            // Index برای جستجوی سریع توکن
-            $table->index('token', 'access_tokens_token_index');
-            
-            // Composite index برای جستجوی توکن با user_id
-            $table->index(['token', 'user_id'], 'access_tokens_token_user_id_index');
-            
-            // Index برای user_id
-            $table->index('user_id', 'access_tokens_user_id_index');
-            
-            // Index برای expires_at (برای پاک کردن توکن‌های منقضی شده)
-            $table->index('expires_at', 'access_tokens_expires_at_index');
-            
-            // Index برای is_revoked
-            $table->index('is_revoked', 'access_tokens_is_revoked_index');
-        });
+        // Use raw SQL to create indexes with IF NOT EXISTS for PostgreSQL
+        DB::statement('CREATE INDEX IF NOT EXISTS access_tokens_token_index ON access_tokens (token)');
+        DB::statement('CREATE INDEX IF NOT EXISTS access_tokens_token_user_id_index ON access_tokens (token, user_id)');
+        DB::statement('CREATE INDEX IF NOT EXISTS access_tokens_user_id_index ON access_tokens (user_id)');
+        DB::statement('CREATE INDEX IF NOT EXISTS access_tokens_expires_at_index ON access_tokens (expires_at)');
+        DB::statement('CREATE INDEX IF NOT EXISTS access_tokens_is_revoked_index ON access_tokens (is_revoked)');
         
-        Schema::table('refresh_tokens', function (Blueprint $table) {
-            // Index برای token
-            $table->index('token', 'refresh_tokens_token_index');
-            
-            // Index برای user_id
-            $table->index('user_id', 'refresh_tokens_user_id_index');
-            
-            // Index برای expires_at
-            $table->index('expires_at', 'refresh_tokens_expires_at_index');
-        });
+        DB::statement('CREATE INDEX IF NOT EXISTS refresh_tokens_token_index ON refresh_tokens (token)');
+        DB::statement('CREATE INDEX IF NOT EXISTS refresh_tokens_user_id_index ON refresh_tokens (user_id)');
+        DB::statement('CREATE INDEX IF NOT EXISTS refresh_tokens_expires_at_index ON refresh_tokens (expires_at)');
     }
 
     /**

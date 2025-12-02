@@ -43,25 +43,25 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
-        // 'mysql' => [
-        //     'driver' => 'mysql',
-        //     'url' => env('DB_URL'),
-        //     'host' => env('DB_HOST', '127.0.0.1'),
-        //     'port' => env('DB_PORT', '3306'),
-        //     'database' => env('DB_DATABASE', 'madras'),
-        //     'username' => env('DB_USERNAME', 'root'),
-        //     'password' => env('DB_PASSWORD', ''),
-        //     'unix_socket' => env('DB_SOCKET', ''),
-        //     'charset' => env('DB_CHARSET', 'utf8mb4'),
-        //     'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
-        //     'prefix' => '',
-        //     'prefix_indexes' => true,
-        //     'strict' => true,
-        //     'engine' => null,
-        //     'options' => extension_loaded('pdo_mysql') ? array_filter([
-        //         PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-        //     ]) : [],
-        // ],
+         'mysql_old' => [
+             'driver' => 'mysql',
+             'url' => env('DB_URL'),
+             'host' => env('DB_HOST', '127.0.0.1'),
+             'port' => env('DB_PORT', '3306'),
+             'database' => env('DB_DATABASE', 'madras'),
+             'username' => env('DB_USERNAME', 'root'),
+             'password' => env('DB_PASSWORD', ''),
+             'unix_socket' => env('DB_SOCKET', ''),
+             'charset' => env('DB_CHARSET', 'utf8mb4'),
+             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+             'prefix' => '',
+             'prefix_indexes' => true,
+             'strict' => true,
+             'engine' => null,
+             'options' => extension_loaded('pdo_mysql') ? array_filter([
+                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+             ]) : [],
+         ],
 
         'mariadb' => [
             'driver' => 'mariadb',
@@ -85,17 +85,17 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'madras'),
-            'username' => env('DB_USERNAME', 'postgre'),
-            'password' => env('DB_PASSWORD', '1234'),
-            'charset' => env('DB_CHARSET', 'utf8'),
+            'url' => env('PGSQL_URL'),
+            'host' => env('PGSQL_HOST', '127.0.0.1'),
+            'port' => env('PGSQL_PORT', '5432'),
+            'database' => env('PGSQL_DATABASE', 'madras'),
+            'username' => env('PGSQL_USERNAME', 'postgres'),
+            'password' => env('PGSQL_PASSWORD', ''),
+            'charset' => env('PGSQL_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => env('PGSQL_SSLMODE', 'disable'),
         ],
 
         'pgsql_migrate' => [
@@ -110,7 +110,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => env('PG_SCHEMA', 'public'),
-            'sslmode' => env('PG_SSLMODE', 'prefer'),
+            'sslmode' => env('DB_SSLMODE', 'disable'),
         ],
 
 
@@ -170,10 +170,10 @@ return [
 
         'default' => [
             'url' => env('REDIS_URL'),
-            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'host' => env('REDIS_HOST', 'agllvcewzt.lexoyacloud.ir'),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
-            'port' => env('REDIS_PORT', '6379'),
+            'port' => env('REDIS_PORT', '30070'),
             'database' => env('REDIS_DB', '0'),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),

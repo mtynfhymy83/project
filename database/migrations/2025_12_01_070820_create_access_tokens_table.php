@@ -1,109 +1,43 @@
 <?php
 
-namespace App\Models;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
-
-class AccessToken extends Model
+return new class extends Migration
 {
-    use HasFactory;
-
-    protected $fillable = [
-        'user_id',
-        'token',
-        'token_type',
-        'expires_at',
-        'device_name',
-        'device_type',
-        'platform',
-        'ip_address',
-        'user_agent',
-        'is_revoked',
-        'revoked_at',
-        'last_used_at',
-    ];
-
-    protected $casts = [
-        'expires_at' => 'datetime',
-        'revoked_at' => 'datetime',
-        'last_used_at' => 'datetime',
-        'is_revoked' => 'boolean',
-    ];
-
     /**
-     * Relations
+     * Run the migrations.
      */
-    public function user()
+    public function up(): void
     {
-        return $this->belongsTo(User::class);
+        Schema::create('access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('token', 255)->unique();
+            $table->string('token_type', 50)->default('Bearer');
+            $table->timestamp('expires_at');
+            $table->string('device_name')->nullable();
+            $table->string('device_type', 50)->nullable();
+            $table->string('platform', 50)->nullable();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->boolean('is_revoked')->default(false);
+            $table->timestamp('revoked_at')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamps();
+
+            // Indexes
+            $table->index(['user_id', 'is_revoked', 'expires_at']);
+            $table->index('expires_at');
+        });
     }
 
     /**
-     * Helper Methods
+     * Reverse the migrations.
      */
-
-    /**
-     * آیا توکن منقضی شده؟
-     */
-    public function isExpired(): bool
+    public function down(): void
     {
-        return $this->expires_at->isPast();
+        Schema::dropIfExists('access_tokens');
     }
-
-    /**
-     * آیا توکن معتبر است؟
-     */
-    public function isValid(): bool
-    {
-        return !$this->is_revoked && !$this->isExpired();
-    }
-
-    /**
-     * لغو توکن
-     */
-    public function revoke(): bool
-    {
-        return $this->update([
-            'is_revoked' => true,
-            'revoked_at' => now(),
-        ]);
-    }
-
-    /**
-     * بروزرسانی زمان آخرین استفاده
-     */
-    public function updateLastUsed(): bool
-    {
-        return $this->update(['last_used_at' => now()]);
-    }
-
-    /**
-     * Scopes
-     */
-
-    public function scopeValid($query)
-    {
-        return $query->where('is_revoked', false)
-            ->where('expires_at', '>', now());
-    }
-
-    public function scopeExpired($query)
-    {
-        return $query->where('expires_at', '<=', now());
-    }
-
-    public function scopeRevoked($query)
-    {
-        return $query->where('is_revoked', true);
-    }
-
-    /**
-     * Auto-delete expired tokens (برای Schedule)
-     */
-    public static function deleteExpiredTokens(): int
-    {
-        return static::expired()->delete();
-    }
-}
+};

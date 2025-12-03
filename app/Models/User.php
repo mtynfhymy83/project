@@ -187,3 +187,4 @@ class User extends Authenticatable implements JWTSubject
         return $query->whereNotNull('email_verified_at');
     }
 }
+

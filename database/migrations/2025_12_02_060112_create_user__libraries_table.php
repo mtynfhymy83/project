@@ -13,44 +13,19 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('book_id')->constrained()->onDelete('cascade');
 
-            // Access Type
-            $table->enum('access_type', ['purchased', 'subscription', 'free'])->default('purchased');
-            $table->unsignedBigInteger('purchase_id')->nullable(); // Foreign key will be added later
-            $table->unsignedBigInteger('subscription_id')->nullable(); // Foreign key will be added later
-
-            // Reading Progress
+            // Reading Progress (lightweight - detailed analytics in reading_sessions)
+            $table->decimal('progress_percent', 5, 2)->default(0);
             $table->integer('current_page')->default(0);
-            $table->integer('current_paragraph')->default(0);
-            $table->integer('total_pages_read')->default(0);
-            $table->decimal('progress_percentage', 5, 2)->default(0);
-            $table->enum('status', ['not_started', 'reading', 'completed'])->default('not_started');
+            $table->string('status', 30)->default('not_started'); // not_started, reading, completed
 
             // Timestamps
             $table->timestamp('last_read_at')->nullable();
-            $table->timestamp('completed_at')->nullable();
-            $table->timestamp('access_expires_at')->nullable(); // برای اشتراک
-
-            // Reading Statistics
-            $table->integer('total_reading_time')->default(0); // ثانیه
-            $table->integer('session_count')->default(0); // تعداد جلسات مطالعه
-
-            // Settings
-            $table->boolean('needs_update')->default(false); // برای sync
-            $table->json('reading_preferences')->nullable(); // تنظیمات خواندن (فونت، سایز، تم)
-
-            $table->timestamps();
+            $table->timestamp('updated_at')->nullable();
 
             // Indexes
-            $table->index('user_id');
-            $table->index('book_id');
-            $table->index('access_type');
-            $table->index('status');
-            $table->index('last_read_at');
-            $table->index(['user_id', 'status']);
             $table->index(['user_id', 'last_read_at']);
-            $table->index(['user_id', 'access_type']);
-            $table->index('access_expires_at');
-
+            $table->index(['user_id', 'status']);
+            
             // Unique: یک کتاب یکبار در کتابخانه
             $table->unique(['user_id', 'book_id']);
         });

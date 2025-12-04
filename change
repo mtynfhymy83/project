@@ -1,0 +1,365 @@
+متین, [12/4/2025 8:43 AM]
+<?php
+
+// =============================================
+// MIGRATION 1: user_profiles (جدا از users)
+// =============================================
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('user_profiles', function (Blueprint $table) {
+            $table->foreignId('user_id')->primary()->constrained()->onDelete('cascade');
+            $table->string('avatar')->nullable();
+            $table->jsonb('preferences')->nullable(); // font, theme, etc.
+            $table->jsonb('metadata')->nullable(); // extra flexible data
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('user_profiles');
+    }
+};
+
+// =============================================
+// MIGRATION 2: book_stats (denormalized counters)
+// =============================================
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('book_stats', function (Blueprint $table) {
+            $table->foreignId('book_id')->primary()->constrained()->onDelete('cascade');
+            $table->bigInteger('view_count')->default(0);
+            $table->integer('purchase_count')->default(0);
+            $table->integer('download_count')->default(0);
+            $table->decimal('rating', 3, 2)->default(0);
+            $table->integer('rating_count')->default(0);
+            $table->timestamp('updated_at');
+
+            // Indexes
+            $table->index('view_count');
+            $table->index('purchase_count');
+            $table->index('rating');
+        });
+
+        // Trigger برای auto-create
+        DB::statement('
+            CREATE OR REPLACE FUNCTION create_book_stats()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                INSERT INTO book_stats (book_id, updated_at)
+                VALUES (NEW.id, NOW())
+                ON CONFLICT (book_id) DO NOTHING;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ');
+
+        DB::statement('
+            CREATE TRIGGER book_stats_auto_create
+            AFTER INSERT ON books
+            FOR EACH ROW
+            EXECUTE FUNCTION create_book_stats();
+        ');
+    }
+
+    public function down(): void
+    {
+        DB::statement('DROP TRIGGER IF EXISTS book_stats_auto_create ON books');
+        DB::statement('DROP FUNCTION IF EXISTS create_book_stats');
+        Schema::dropIfExists('book_stats');
+    }
+};
+
+// =============================================
+// MIGRATION 3: books (remove stats, add features)
+// =============================================
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('books', function (Blueprint $table) {
+            // حذف counters (منتقل به book_stats)
+            $table->dropColumn([
+                'view_count',
+                'purchase_count', 
+                'download_count',
+                'rating',
+                'rating_count'
+            ]);
+
+            // اضافه کردن features jsonb
+            $table->jsonb('features')->nullable()->after('file_size');
+        });
+
+        // Migrate existing features
+        DB::statement("
+            UPDATE books SET features = jsonb_build_object(
+                'has_description', has_description,
+                'has_sound', has_sound,
+                'has_video', has_video,
+                'has_image', has_image,
+                'has_test', has_test,
+                'has_essay', has_essay,
+                'has_download', has_download
+            )
+        ");
+
+        Schema::table('books', function (Blueprint $table) {
+            // حذف ستون‌های قدیمی
+            $table->dropColumn([
+                'has_description',
+                'has_sound',
+                'has_video',
+                'has_image',
+                'has_test',
+                'has_essay',
+                'has_download'
+            ]);
+        });
+    }
+
+متین, [12/4/2025 8:43 AM]
+public function down(): void
+    {
+        Schema::table('books', function (Blueprint $table) {
+            $table->dropColumn('features');
+            $table->integer('view_count')->default(0);
+            $table->integer('purchase_count')->default(0);
+            // ... rest of fields
+        });
+    }
+};
+
+// =============================================
+// MIGRATION 4: book_versions (multiple formats)
+// =============================================
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('book_versions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('book_id')->constrained()->onDelete('cascade');
+            $table->string('version', 50)->default('1.0');
+            $table->enum('format', ['epub', 'pdf', 'audio', 'mobi']); // فرمت
+            $table->string('file_path', 1000);
+            $table->bigInteger('file_size')->unsigned()->default(0);
+            $table->integer('duration_seconds')->nullable(); // برای audio
+            $table->boolean('is_active')->default(true);
+            $table->jsonb('metadata')->nullable(); // quality, bitrate, etc.
+            $table->timestamps();
+
+            // Indexes
+            $table->index(['book_id', 'is_active']);
+            $table->index(['book_id', 'format']);
+            
+            // یک کتاب فقط یک نسخه فعال از هر فرمت
+            $table->unique(['book_id', 'format', 'is_active'], 'unique_active_format')
+                ->where('is_active', true);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('book_versions');
+    }
+};
+
+// =============================================
+// MIGRATION 5: book_contents (با tsvector)
+// =============================================
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // فعال کردن pg_trgm
+        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+
+        Schema::table('book_contents', function (Blueprint $table) {
+            // اضافه کردن tsvector column
+            $table->tsvector('tsv')->nullable();
+        });
+
+        // GIN Index برای full-text search
+        DB::statement('
+            CREATE INDEX book_contents_tsv_idx 
+            ON book_contents USING gin(tsv)
+        ');
+
+        // Trigram Index برای fuzzy search
+        DB::statement('
+            CREATE INDEX book_contents_text_trgm_idx 
+            ON book_contents USING gin(text gin_trgm_ops)
+        ');
+
+        // Trigger برای auto-update tsvector
+        DB::statement("
+            CREATE OR REPLACE FUNCTION book_contents_tsv_update()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.tsv := to_tsvector('simple', COALESCE(NEW.text, ''));
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ");
+
+        DB::statement('
+            CREATE TRIGGER book_contents_tsv_trigger
+            BEFORE INSERT OR UPDATE ON book_contents
+            FOR EACH ROW
+            EXECUTE FUNCTION book_contents_tsv_update();
+        ');
+
+        // Update existing records
+        DB::statement("
+            UPDATE book_contents 
+            SET tsv = to_tsvector('simple', COALESCE(text, ''))
+        ");
+    }
+
+    public function down(): void
+    {
+        DB::statement('DROP TRIGGER IF EXISTS book_contents_tsv_trigger ON book_contents');
+        DB::statement('DROP FUNCTION IF EXISTS book_contents_tsv_update');
+        DB::statement('DROP INDEX IF EXISTS book_contents_tsv_idx');
+        DB::statement('DROP INDEX IF EXISTS book_contents_text_trgm_idx');
+        
+        Schema::table('book_contents', function (Blueprint $table) {
+            $table->dropColumn('tsv');
+        });
+    }
+};
+
+// =============================================
+// MIGRATION 6: media (polymorphic)
+// =============================================
+
+متین, [12/4/2025 8:43 AM]
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('media', function (Blueprint $table) {
+            $table->id();
+            $table->string('model_type', 100); // App\Models\Book, etc.
+            $table->unsignedBigInteger('model_id');
+            $table->enum('type', ['audio', 'image', 'video', 'pdf']);
+            $table->enum('provider', ['s3', 'local', 'cdn'])->default('s3');
+            $table->string('path', 1024);
+            $table->string('url', 1024)->nullable(); // full URL
+            $table->bigInteger('size')->unsigned()->nullable();
+            $table->jsonb('metadata')->nullable(); // width, height, duration, etc.
+            $table->timestamps();
+
+            // Indexes
+            $table->index(['model_type', 'model_id']);
+            $table->index('type');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('media');
+    }
+};
+
+// =============================================
+// MIGRATION 7: reading_sessions (با partition support)
+// =============================================
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // ایجاد جدول اصلی با partition
+        DB::statement("
+            CREATE TABLE reading_sessions (
+                id BIGSERIAL,
+                user_id BIGINT NOT NULL,
+                book_id BIGINT NOT NULL,
+                started_at TIMESTAMPTZ NOT NULL,
+                ended_at TIMESTAMPTZ,
+                duration INT DEFAULT 0,
+                pages_read INT DEFAULT 0,
+                start_page INT,
+                end_page INT,
+                device_type VARCHAR(50),
+                platform VARCHAR(50),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                PRIMARY KEY (id, created_at)
+            ) PARTITION BY RANGE (created_at)
+        ");
+
+        // ایجاد پارتیشن برای ماه جاری
+        $currentMonth = now()->format('Y_m');
+        $nextMonth = now()->addMonth()->format('Y_m');
+        $startDate = now()->startOfMonth()->toDateString();
+        $endDate = now()->addMonth()->startOfMonth()->toDateString();
+
+        DB::statement("
+            CREATE TABLE reading_sessions_{$currentMonth}
+            PARTITION OF reading_sessions
+            FOR VALUES FROM ('{$startDate}') TO ('{$endDate}')
+        ");
+
+        // Indexes
+        DB::statement("
+            CREATE INDEX reading_sessions_{$currentMonth}_user_idx 
+            ON reading_sessions_{$currentMonth}(user_id, created_at DESC)
+        ");
+
+        DB::statement("
+            CREATE INDEX reading_sessions_{$currentMonth}_book_idx 
+            ON reading_sessions_{$currentMonth}(book_id, created_at DESC)
+        ");
+    }
+
+    public function down(): void
+    {
+        DB::statement('DROP TABLE IF EXISTS reading_sessions CASCADE');
+    }
+};
+
+// =============================================
+// MIGRATION 8: Optimize existing tables
+// =============================================
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // books: GIN index برای title
+        DB::statement("
+            CREATE INDEX books_title_trgm_idx 
+            ON books USING gin(title gin_trgm_ops)
+        ");
+
+        // user_library: composite index بهتر
+        Schema::table('user_library', function (Blueprint $table) {
+            $table->index(['user_id', 'status', 'last_read_at']);
+        });
+
+        // purchases: partition-ready (اختیاری)
+        Schema::table('purchases', function (Blueprint $table) {
+            $table->index(['user_id', 'status', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        DB::statement('DROP INDEX IF EXISTS books_title_trgm_idx');
+    }
+};

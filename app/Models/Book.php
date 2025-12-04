@@ -71,6 +71,10 @@ class Book extends Model
         'purchase_count' => 'integer',
         'download_count' => 'integer',
         'rating_count' => 'integer',
+        'authors_cache' => 'array',
+        'categories_cache' => 'array',
+        'features' => 'array',
+        'tags' => 'array',
     ];
 
     /**
@@ -103,17 +107,37 @@ class Book extends Model
 
     public function contents()
     {
-        return $this->hasMany(BookContent::class)->orderBy('page_number')->orderBy('paragraph_number');
+        return $this->hasMany(BookContent::class)->orderBy('page_number')->orderBy('order');
+    }
+
+    public function versions()
+    {
+        return $this->hasMany(BookVersion::class);
+    }
+
+    public function activeVersions()
+    {
+        return $this->hasMany(BookVersion::class)->where('is_active', true);
+    }
+
+    public function stats()
+    {
+        return $this->hasOne(BookStats::class);
+    }
+
+    public function detailCache()
+    {
+        return $this->hasOne(BookDetailCache::class);
+    }
+
+    public function media()
+    {
+        return $this->morphMany(Media::class, 'model');
     }
 
     public function purchases()
     {
         return $this->hasMany(Purchase::class);
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
     }
 
     public function questions()
@@ -124,6 +148,17 @@ class Book extends Model
     public function exams()
     {
         return $this->hasMany(BookExam::class);
+    }
+
+    public function userLibraries()
+    {
+        return $this->hasMany(UserLibrary::class);
+    }
+
+    public function favorites()
+    {
+        return $this->belongsToMany(User::class, 'favorites')
+            ->withTimestamps();
     }
 
     /**
@@ -237,6 +272,100 @@ class Book extends Model
     public function getTagsArrayAttribute(): array
     {
         return $this->tags ? explode(',', $this->tags) : [];
+    }
+
+    /**
+     * Cache Methods for Authors & Categories
+     */
+
+    /**
+     * Get authors list (from cache if available, otherwise from relation)
+     */
+    public function getAuthorsListAttribute(): array
+    {
+        // اگر cache خالی است، از relation استفاده کن
+        if (empty($this->authors_cache)) {
+            return $this->authors->map(fn($a) => [
+                'id' => $a->id,
+                'name' => $a->name,
+                'slug' => $a->slug,
+            ])->toArray();
+        }
+        return $this->authors_cache;
+    }
+
+    /**
+     * Get categories list (from cache if available, otherwise from relation)
+     */
+    public function getCategoriesListAttribute(): array
+    {
+        // اگر cache خالی است، از relation استفاده کن
+        if (empty($this->categories_cache)) {
+            return $this->categories->map(fn($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+            ])->toArray();
+        }
+        return $this->categories_cache;
+    }
+
+    /**
+     * Sync authors cache
+     */
+    public function syncAuthorsCache(): void
+    {
+        $this->authors_cache = $this->authors()
+            ->orderBy('book_author.order')
+            ->get()
+            ->map(fn($author) => [
+                'id' => $author->id,
+                'name' => $author->name,
+                'slug' => $author->slug,
+            ])
+            ->toArray();
+        
+        $this->saveQuietly();
+    }
+
+    /**
+     * Sync categories cache
+     */
+    public function syncCategoriesCache(): void
+    {
+        $this->categories_cache = $this->categories()
+            ->get()
+            ->map(fn($category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ])
+            ->toArray();
+        
+        $this->saveQuietly();
+    }
+
+    /**
+     * Sync all caches
+     */
+    public function syncAllCaches(): void
+    {
+        $this->syncAuthorsCache();
+        $this->syncCategoriesCache();
+    }
+
+    /**
+     * Boot method for model events
+     */
+    protected static function booted(): void
+    {
+        // وقتی authors یا categories sync می‌شوند، cache را آپدیت کن
+        static::saved(function ($book) {
+            // فقط اگر کتاب قبلاً وجود داشته (not first create)
+            if (!$book->wasRecentlyCreated) {
+                \App\Jobs\SyncBookCache::dispatch($book->id);
+            }
+        });
     }
 
 }

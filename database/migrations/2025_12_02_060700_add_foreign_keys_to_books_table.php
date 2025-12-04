@@ -71,34 +71,12 @@ return new class extends Migration
             });
         }
 
-        // User library foreign keys
-        if (Schema::hasTable('user_library')) {
-            Schema::table('user_library', function (Blueprint $table) {
-                if (Schema::hasTable('purchases')) {
-                    $table->foreign('purchase_id')
-                        ->references('id')
-                        ->on('purchases')
-                        ->onDelete('set null');
-                }
-                
-                if (Schema::hasTable('user_subscriptions')) {
-                    $table->foreign('subscription_id')
-                        ->references('id')
-                        ->on('user_subscriptions')
-                        ->onDelete('set null');
-                }
-            });
-        }
+        // User library foreign keys - removed (simplified structure)
     }
 
     public function down(): void
     {
-        if (Schema::hasTable('user_library')) {
-            Schema::table('user_library', function (Blueprint $table) {
-                $table->dropForeign(['purchase_id']);
-                $table->dropForeign(['subscription_id']);
-            });
-        }
+        // User library foreign keys - removed (simplified structure)
 
         if (Schema::hasTable('subscription_logs')) {
             Schema::table('subscription_logs', function (Blueprint $table) {

@@ -36,6 +36,8 @@ return new class extends Migration {
             $table->index('content_id');
             $table->index(['book_id', 'type']);
             $table->index(['book_id', 'is_active']);
+            
+            // Note: paragraph_id changed to content_id
         });
 
         // پاسخ‌های کاربران به سوالات

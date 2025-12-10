@@ -42,8 +42,8 @@ return [
             'synchronous' => null,
             'transaction_mode' => 'DEFERRED',
         ],
-
-//         'mysql_old' => [
+//
+//         'mysql' => [
 //             'driver' => 'mysql',
 //             'url' => env('DB_URL'),
 //             'host' => env('DB_HOST', '127.0.0.1'),
@@ -110,7 +110,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => env('PG_SCHEMA', 'public'),
-            'sslmode' => env('DB_SSLMODE', 'disable'),
+            'sslmode' => env('PG_SSLMODE', 'prefer'),
         ],
 
 

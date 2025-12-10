@@ -14,6 +14,20 @@ class UserProfile extends Model
 
     protected $fillable = [
         'user_id',
+        'eitaa_id',
+        'username',
+        'name',
+        'family',
+        'gender',
+        'age',
+        'national_code',
+        'birthday',
+        'city',
+        'country',
+        'postal_code',
+        'adress',
+        'code',
+        'sendtime',
         'avatar',
         'preferences',
         'metadata',
@@ -60,4 +74,8 @@ class UserProfile extends Model
         $this->save();
     }
 }
+
+
+
+
 

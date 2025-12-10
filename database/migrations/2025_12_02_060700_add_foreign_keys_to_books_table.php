@@ -18,7 +18,7 @@ return new class extends Migration
             }
             
             if (Schema::hasTable('categories')) {
-                $table->foreign('primary_category_id')
+                $table->foreign('category')
                     ->references('id')
                     ->on('categories')
                     ->onDelete('set null');

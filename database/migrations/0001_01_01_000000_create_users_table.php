@@ -10,21 +10,21 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('username')->unique();
-            $table->string('name', 100);
-            $table->string('email', 150)->unique();
-            $table->string('phone', 15)->unique()->nullable();
-            $table->string('password');
+            $table->string('username')->nullable();
+            $table->string('displayname', 100)->nullable();
+            $table->string('email', 150)->nullable();
+            $table->string('tel', 15)->unique()->nullable();
+            $table->string('password')->nullable();
             $table->string('avatar')->nullable();
-            $table->enum('level', ['user', 'admin', 'teacher'])->default('user');
-            $table->enum('approved', ['yes', 'no'])->default('yes');
+            $table->integer('level')->default('1');
+            $table->integer('aproved')->default('0');
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
 
-            // Indexes برای بهینه‌سازی
+
             $table->index('username');
-            $table->index('phone');
+            $table->index('tel');
             $table->index('level');
             $table->index('created_at');
         });

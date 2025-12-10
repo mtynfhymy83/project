@@ -72,3 +72,8 @@ class BookDetailCache extends Model
     }
 }
 
+
+
+
+
+

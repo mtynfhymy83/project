@@ -66,17 +66,17 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getUsernameAttribute()
     {
-        return $this->userMeta?->username ?? 'user_' . $this->id;
+        return $this->userProfile?->username ?? 'user_' . $this->id;
     }
 
     /**
      * Relations
      */
 
-    // User Meta (Eitaa ID, Username, etc.)
-    public function userMeta()
+    // User Profile (Eitaa ID, Username, etc.)
+    public function userProfile()
     {
-        return $this->hasOne(UserMeta::class);
+        return $this->hasOne(UserProfile::class, 'user_id');
     }
 
     // Access Tokens
@@ -159,7 +159,7 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getEitaaId(): ?string
     {
-        return $this->userMeta?->eitaa_id;
+        return $this->userProfile?->eitaa_id;
     }
 
     /**

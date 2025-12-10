@@ -8,7 +8,7 @@ use App\DTOs\Auth\AuthResponseDTO;
 use App\DTOs\Auth\RefreshTokenDTO;
 use App\DTOs\Auth\UserDTO;
 use App\Models\User;
-use App\Models\UserMeta;
+use App\Models\UserProfile;
 use App\Models\AccessToken;
 use App\Models\RefreshToken;
 use Carbon\Carbon;
@@ -51,13 +51,13 @@ class AuthService implements AuthServiceInterface
             $eitaaUserData = $this->parseEitaaData($dto->eitaaData);
 
             // 3. جستجوی کاربر با Eitaa ID (با eager loading برای جلوگیری از N+1)
-            $userMeta = UserMeta::with('user')->where('eitaa_id', $eitaaUserData['id'])->first();
+            $userProfile = UserProfile::with('user')->where('eitaa_id', $eitaaUserData['id'])->first();
 
             $isNewUser = false;
 
-            if ($userMeta) {
+            if ($userProfile) {
                 // کاربر موجود است
-                $user = $userMeta->user;
+                $user = $userProfile->user;
             } else {
                 // ثبت‌نام کاربر جدید
                 $user = $this->registerNewUser($eitaaUserData);
@@ -120,33 +120,35 @@ class AuthService implements AuthServiceInterface
         $email = $eitaaUserData['email'] ?? $username . '@eitaa.local';
 
 
-// ایجاد کاربر
+
         $user = User::create([
             'name' => trim($firstName . ' ' . $lastName) ?: $username,
             'email' => $email,
-            'phone' => null,
+            'tel' => null,
             'password' => Hash::make(uniqid()), // پسورد رندوم
-            'status' => 'active',
+            'approved' => '1',
         ]);
 
-        // ایجاد UserMeta
-        UserMeta::create([
+        // ایجاد UserProfile
+        UserProfile::create([
             'user_id' => $user->id,
             'eitaa_id' => $eitaaUserData['id'],
             'username' => $username,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
+            'name' => $firstName,
+            'family' => $lastName,
         ]);
 
-        return $user->fresh(['userMeta']);
+        return $user->fresh(['userProfile']);
     }
 
     /**
      * تولید Access Token و Refresh Token
-     * 
+     *
      * Access Token: JWT stateless (ذخیره نمی‌شود در دیتابیس)
      * Refresh Token: ذخیره می‌شود در دیتابیس برای امنیت بیشتر
      */
+
+
     public function generateTokens(User $user, array $deviceInfo = []): array
     {
         // تولید JWT Access Token (stateless - بدون ذخیره در دیتابیس)
@@ -265,7 +267,7 @@ class AuthService implements AuthServiceInterface
 
     /**
      * خروج کاربر
-     * 
+     *
      * استفاده از JWT Blacklist برای لغو توکن (stateless)
      */
     public function logout(?string $accessToken = null): bool
@@ -288,7 +290,7 @@ class AuthService implements AuthServiceInterface
 
     /**
      * خروج از همه دستگاه‌ها
-     * 
+     *
      * فقط Refresh Tokens را لغو می‌کنیم
      * Access Tokens به صورت خودکار با expiration منقضی می‌شوند
      */

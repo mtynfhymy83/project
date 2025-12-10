@@ -15,16 +15,16 @@ class UserMeta extends Model
         'user_id',
         'eitaa_id',
         'username',
-        'first_name',
-        'last_name',
+        'name',
+        'family',
         'preferences',
         'extra_data',
     ];
 
-    protected $casts = [
-        'preferences' => 'array',
-        'extra_data' => 'array',
-    ];
+//    protected $casts = [
+//        'preferences' => 'array',
+//        'extra_data' => 'array',
+//    ];
 
     /**
      * Relations
@@ -41,21 +41,21 @@ class UserMeta extends Model
     /**
      * دریافت نام کامل
      */
-    public function getFullName(): string
-    {
-        return trim($this->first_name . ' ' . $this->last_name);
-    }
-
-    /**
-     * بروزرسانی Meta Data
-     */
-    public function updateMetaData(array $data): bool
-    {
-        return $this->update([
-            'eitaa_id' => $data['eitaa_id'] ?? $this->eitaa_id,
-            'username' => $data['username'] ?? $this->username,
-            'first_name' => $data['first_name'] ?? $this->first_name,
-            'last_name' => $data['last_name'] ?? $this->last_name,
-        ]);
-    }
+//    public function getFullName(): string
+//    {
+//        return trim($this->first_name . ' ' . $this->last_name);
+//    }
+//
+//    /**
+//     * بروزرسانی Meta Data
+//     */
+//    public function updateMetaData(array $data): bool
+//    {
+//        return $this->update([
+//            'eitaa_id' => $data['eitaa_id'] ?? $this->eitaa_id,
+//            'username' => $data['username'] ?? $this->username,
+//            'first_name' => $data['first_name'] ?? $this->first_name,
+//            'last_name' => $data['last_name'] ?? $this->last_name,
+//        ]);
+//    }
 }

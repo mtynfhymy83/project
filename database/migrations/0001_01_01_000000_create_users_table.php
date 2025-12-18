@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('username')->nullable();
             $table->string('displayname', 100)->nullable();
             $table->string('email', 150)->nullable();
-            $table->string('tel', 15)->unique()->nullable();
+            $table->string('tel', 20)->nullable();
             $table->string('password')->nullable();
             $table->string('avatar')->nullable();
             $table->integer('level')->default('1');

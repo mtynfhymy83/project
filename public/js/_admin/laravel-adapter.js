@@ -123,12 +123,40 @@
     };
     
     /**
+     * Helper function برای نرمال‌سازی URL و جلوگیری از تکرار baseUrl
+     */
+    function normalizeUrl(url) {
+        if (!url) return '';
+        
+        // اگر URL از قبل کامل است (شامل http یا https)
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            const baseUrlClean = baseUrl.replace(/\/$/, ''); // حذف trailing slash
+            const baseDomain = baseUrlClean.replace(/^https?:\/\//, ''); // استخراج دامنه
+            
+            // بررسی برای تکرار baseUrl در URL
+            // مثال: https://modir.madras.app/https://modir.madras.app/s3_file.php
+            const duplicatePattern = new RegExp('^https?://' + baseDomain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/https?://', 'i');
+            if (duplicatePattern.test(url)) {
+                // حذف قسمت تکراری اول
+                url = url.replace(new RegExp('^https?://' + baseDomain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/', 'i'), '');
+            }
+            
+            return url;
+        }
+        
+        return url;
+    }
+    
+    /**
      * Helper function برای ساخت URL تصویر thumbnail
      */
     window.thumb = function(path, size) {
         if (!path) return '';
         
-        // اگر path از قبل کامل است
+        // نرمال‌سازی URL برای جلوگیری از تکرار
+        path = normalizeUrl(path);
+        
+        // اگر path از قبل کامل است (شامل http یا https)
         if (path.startsWith('http://') || path.startsWith('https://')) {
             return path;
         }
@@ -176,9 +204,16 @@
         if (settings.url) {
             settings.url = convertUrl(settings.url);
             
-            // اطمینان از وجود baseUrl در ابتدای URL
-            if (!settings.url.startsWith('http') && !settings.url.startsWith('/')) {
-                settings.url = baseUrl + settings.url;
+            // نرمال‌سازی URL برای جلوگیری از تکرار baseUrl
+            settings.url = normalizeUrl(settings.url);
+            
+            // اگر URL از قبل کامل نیست
+            if (!settings.url.startsWith('http://') && !settings.url.startsWith('https://')) {
+                if (!settings.url.startsWith('/')) {
+                    // URL نسبی است و با / شروع نمی‌شود
+                    settings.url = baseUrl + settings.url;
+                }
+                // اگر URL با / شروع می‌شود، بدون تغییر باقی می‌ماند
             }
         }
         

@@ -29,7 +29,7 @@ class AuthService implements AuthServiceInterface
         try {
             DB::beginTransaction();
 
-            // 1. بررسی Bot Token
+
             $botToken = config('services.eitaa.bot_token');
 
             if (empty($botToken)) {
@@ -39,7 +39,7 @@ class AuthService implements AuthServiceInterface
                 );
             }
 
-            // 2. اعتبارسنجی داده‌های Eitaa
+
             if (!$this->validateEitaaData($dto->eitaaData, $botToken)) {
                 return new AuthResponseDTO(
                     success: false,

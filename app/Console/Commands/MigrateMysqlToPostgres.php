@@ -250,7 +250,7 @@ class MigrateMysqlToPostgres extends Command
             if (!isset($row[$col])) continue;
 
             $dataType = $meta['type'] ?? null;
-            
+
             // تبدیل مقادیر خالی برای ستون‌های عددی به NULL
             if (in_array($dataType, ['bigint', 'integer', 'smallint', 'numeric', 'decimal', 'real', 'double precision'], true)) {
                 if ($row[$col] === '' || (is_string($row[$col]) && trim($row[$col]) === '')) {

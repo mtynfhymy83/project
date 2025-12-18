@@ -14,6 +14,9 @@ return new class extends Migration
         Schema::create('book_details', function (Blueprint $table) {
 
             $table->foreignId('book_id')->unique()->constrained('books')->onDelete('cascade');;
+            $table->unsignedBigInteger('publisher_id')->nullable();
+            $table->unsignedBigInteger('category')->nullable();
+            $table->unsignedBigInteger('author')->nullable();
 
             $table->timestamps();
         });
